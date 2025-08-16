@@ -7,6 +7,10 @@ import re
 import sqlite3
 from datetime import datetime
 from tkinter import messagebox
+# import pandas as pd
+
+# df = pd.read_csv('archivo.csv')
+# print(df)
 
 
 import os
@@ -134,15 +138,18 @@ def name_validate_sql(name):
 def save_data(file_path, t_name, sheet_name, all_tabs, sufijo): #name_path_file, table_name.get(), list_sheets.get(),var.get()
     # Abre el diálogo para seleccionar una carpeta
     # carpeta = filedialog.askdirectory(title="Selecciona una carpeta")
-    file_path = filedialog.asksaveasfilename(
-        title="Guardar base de datos SQLite como...",
-        defaultextension=".db",  # Extensión por defecto si el usuario no pone una
-        filetypes=[
-            ("SQLite Database (*.db, *.sqlite, *.sqlite3, *.db3, *.sdb, *.sl3)",
-            "*.sqlite *.sqlite3 *.db *.db3 *.sdb *.sl3"),
-            ("Todos los archivos", "*.*")
-        ]
-    )
+    if var_saved.get(): 
+        file_path = "DATA/data_main.db"
+    else:
+        file_path = filedialog.asksaveasfilename(
+            title="Guardar base de datos SQLite como...",
+            defaultextension=".db",  # Extensión por defecto si el usuario no pone una
+            filetypes=[
+                ("SQLite Database (*.db, *.sqlite, *.sqlite3, *.db3, *.sdb, *.sl3)",
+                "*.sqlite *.sqlite3 *.db *.db3 *.sdb *.sl3"),
+                ("Todos los archivos", "*.*")
+            ]
+        )
     if not(file_path):
         messagebox.showwarning("Alerta", 'Debe seleccionar una ruta para almacenar la base de datos')
         return
@@ -293,6 +300,8 @@ def save_data(file_path, t_name, sheet_name, all_tabs, sufijo): #name_path_file,
                 widget.destroy()
         
         refrescar()
+        lbl_file_path_out.delete(0, tk.END)      # Borrar todo el contenido
+        lbl_file_path_out.insert(0, file_path)  # Insertar texto desde el inicio
     if all_tabs:
         #LISTA DE HOJAS VALIDADAS
         SHEET_OK_INSERT = []
@@ -492,7 +501,15 @@ def get_file_path():
     global name_path_file  # Declaración global para usar la variable fuera de la función
     file = filedialog.askopenfilename(
         title="Selecciona un archivo Excel",
-        filetypes=[("Archivos Excel", ".xls"), ("Archivos Excel", ".xlsx"),("Archivos CSV", ".csv"), ("Todos los archivos", ".")])
+        filetypes=[
+            ("Archivos compatibles", "*.xls *.xlsx *.csv"),  # <- filtro combinado
+            ("Archivos Excel (.xls)", "*.xls"),
+            ("Archivos Excel (.xlsx)", "*.xlsx"),
+            ("Archivos CSV", "*.csv"),
+            ("Todos los archivos", "*.*")
+        ]
+    )
+
     if file:
         print(f"Archivo seleccionado: {file}")
         lbl_file_path.delete(0, tk.END)      # Borrar todo el contenido
@@ -506,9 +523,9 @@ def get_database_info(tree):
         tree.delete(item)
     # Conectar a la base de datos
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.join(base_dir, "DATA", "data_main.db")
-    conn = sqlite3.connect(db_path)
-    #conn = sqlite3.connect("XLSDB/DATA/data_main.db")
+    # db_path = os.path.join(base_dir, "DATA", "data_main.db")
+    # conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect("DATA/data_main.db")
     cursor = conn.cursor()
 
     # Ejecutar la consulta para obtener las tablas
@@ -601,7 +618,8 @@ def execute_query(data_text):
                 line_query+=1
         conn.close()
 root = Tk()
-root.title("SQLXEL v1.0.0 Powered by Breyner J")
+root.title("SQLXEL Administrator v1.0.0 Powered by Breyner J")
+root.iconbitmap("SOURCE/icon.ico")
 Label(root, text="SQLXEL Administrator", font=("Arial", 12, "bold")).pack(fill=X)
 
 F_main = Frame(root, bg="green")
@@ -609,9 +627,10 @@ F_main.pack(fill=BOTH)
 
 F_filter = LabelFrame(F_main, text="Filter and selection")
 F_filter.pack(fill=BOTH, expand=True,side=LEFT)
-
+Label(F_filter,text="Origin").pack(expand=True, fill=X)
 lbl_file_path = Entry(F_filter)
 lbl_file_path.pack(expand=True, fill=X)
+Label(F_filter,text="Destination").pack(expand=True, fill=X)
 lbl_file_path_out = Entry(F_filter)
 lbl_file_path_out.pack(expand=True, fill=X)
 Button(F_filter, text="Open Excel file", bg="green",fg="white",font=("arial",12,"bold"), command=lambda: get_file_path()).pack()
@@ -622,7 +641,8 @@ FR_input.pack()
 Label(FR_input, text="Select sheet :").grid(row=0, column=0, sticky='e')
 Label(FR_input, text="All of the sheets :").grid(row=0, column=2, sticky='e')
 Label(FR_input, text="Name as table :").grid(row=2, column=0, sticky='e')
-Label(FR_input, text="Suffix :").grid(row=2, column=2, sticky='e')
+Label(FR_input, text="Suffix :").grid(row=3, column=0, sticky='e')
+Label(FR_input, text="Save locally :").grid(row=2, column=2, sticky='e')
 
 # === Canvas + Scrollbar en el contenedor principal ===
 wrapper = Frame(F_filter)
@@ -683,14 +703,14 @@ list_sheets = ttk.Combobox(FR_input,state="readonly")
 list_sheets.grid(row=0, column=1, sticky='w')
 list_sheets.bind("<<ComboboxSelected>>", al_seleccionar_hoja)
 table_name = Entry(FR_input)
-table_name.grid(row=2, column=1, sticky='w')
+table_name.grid(row=2, column=1, sticky='we')
 sufijo_name = Entry(FR_input)
-sufijo_name.grid(row=2, column=3, sticky='w')
+sufijo_name.grid(row=3, column=1, sticky='we')
 
 def cambiar_texto():
     # Cambiar el texto del Checkbutton según su estado
     if var.get():
-        checkbutton.config(text="Sí")  # Si está seleccionado, mostrar "Sí"
+        checkbutton.config(text="Yes")  # Si está seleccionado, mostrar "Sí"
         list_sheets.config(state='disabled')
         table_name.config(state='disabled')
         BTN_CHARGE_DATA.config(state="normal")
@@ -708,6 +728,14 @@ def cambiar_texto():
                 widget.configure(state='normal')
         except:
             pass  # Si el widget no tiene la opción 'state'
+def cambiar_texto_save():
+    # Cambiar el texto del Checkbutton según su estado
+    if var_saved.get():
+        checkbutton_save.config(text="Yes")  # Si está seleccionado, mostrar "Sí"
+    else:
+        checkbutton_save.config(text="No")   # Si no está seleccionado, mostrar "No"
+        
+        
 
 def refrescar():
     checkbutton.config(text="No")   # Si no está seleccionado, mostrar "No"
@@ -730,11 +758,13 @@ def refrescar():
 
 # Variable para almacenar el estado del Checkbutton
 var = BooleanVar()
+var_saved = BooleanVar()
 # Crear el Checkbutton
 checkbutton = Checkbutton(FR_input, text="No", variable=var, command=cambiar_texto)
 checkbutton.grid(row=0, column=3, sticky='w')
 
-
+checkbutton_save = Checkbutton(FR_input, text="No", variable=var_saved, command=cambiar_texto_save)
+checkbutton_save.grid(row=2, column=3, sticky='w')
 
 BTN_CHARGE_DATA=Button(FR_input, text="Data load",bg="lightgreen",fg="black", command=lambda: save_data(name_path_file, table_name.get(), list_sheets.get(),var.get(),sufijo_name.get()))
 BTN_CHARGE_DATA.grid(row=5, column=0,columnspan=2, sticky="e")
@@ -753,15 +783,15 @@ style.configure("Treeview", rowheight=25)  # Ajustar altura de filas
 
 
 # Crear un Treeview con columnas
-tree = ttk.Treeview(F_database, columns=("Tabla", "Rows"), show="headings", height=6)
+tree = ttk.Treeview(F_database, columns=("Table", "Columns"), show="headings", height=6)
 
 # Definir encabezados
-tree.heading("Tabla", text="Tabla")
-tree.heading("Rows", text="Rows")
+tree.heading("Table", text="Table")
+tree.heading("Columns", text="Columns")
 
 # Configurar ancho de columnas
-tree.column("Tabla", width=190, anchor="w")
-tree.column("Rows", width=100, anchor="center")
+tree.column("Table", width=190, anchor="w")
+tree.column("Columns", width=100, anchor="center")
 
 # Definir colores con tags
 tree.tag_configure("padre", background="lightblue")   # Rojo claro
@@ -862,16 +892,16 @@ Button(root,text="Execute query",font=("Arial",12,"bold"), cursor="hand2",backgr
 frm_response_iten = Frame(root,bg="grey")
 frm_response_iten.pack(fill=BOTH, expand=True)
 # Crear un Treeview con columnas
-TREE_item = ttk.Treeview(frm_response_iten, columns=("item", "Rows"), show="headings", height=5)
+TREE_item = ttk.Treeview(frm_response_iten, columns=("item", "Columns"), show="headings", height=3)
 
 # Definir encabezados
 TREE_item.heading("item", text="Item")
-TREE_item.heading("Rows", text="Rows")
+TREE_item.heading("Columns", text="Columns")
 
 def on_resize(event):
     ancho = root.winfo_width()
     TREE_item.column("item", width=int(ancho * 0.05), anchor="w")
-    TREE_item.column("Rows", width=int(ancho * 0.95), anchor="w")
+    TREE_item.column("Columns", width=int(ancho * 0.95), anchor="w")
 root.bind("<Configure>", on_resize)
 
 # Definir colores con tags
