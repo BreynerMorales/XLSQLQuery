@@ -559,24 +559,26 @@ def get_database_info(tree):
 
 
 def execute_query(data_text):
-    def show_data(columns,data):
+    def show_data(columns, data):
         for widget in frm_response_show.winfo_children():
             widget.destroy()
-        print(columns)
-        print(data)
-        #GENERA EL TREEVIEW PARA MOSTRAR LOS RESULTADOS
+
         # Crear el Treeview
-        tree = ttk.Treeview(frm_response_show   , columns=tuple(columns), show="headings")
+        tree = ttk.Treeview(frm_response_show, columns=tuple(columns), show="headings")
         tree.pack(expand=True, fill='both', padx=10, pady=10)
-        # select * from wms_inventory limit 1;
-        
+
         # Configurar encabezados
-        for i in columns:
-            tree.heading(i, text=i)
-        #Insertar datos
-        for i in data:
-            tree.insert("", "end", values=i)
-            # for j in i:
+        for col in columns:
+            tree.heading(col, text=col)
+
+        # Definir estilos de fila alternos usando tags
+        tree.tag_configure('evenrow', background='#f0f0f0')  # gris claro
+        tree.tag_configure('oddrow', background='white')     # blanco
+
+        # Insertar datos con colores alternos
+        for idx, row in enumerate(data):
+            tag = 'evenrow' if idx % 2 == 0 else 'oddrow'
+            tree.insert("", "end", values=row, tags=(tag,))
 
     contenido = data_text.replace("\n","").split(";")
 
@@ -601,6 +603,10 @@ def execute_query(data_text):
             len_str = len(i.replace(" ",""))
             if len_str:
                 print(f"Query line {line_query} [{len_str}] chars:", i)
+                # Definir estilos de fila alternos usando tags
+                TREE_item.tag_configure('evenrow', background='#f0f0f0')  # gris claro
+                TREE_item.tag_configure('oddrow', background='white')     # blanco
+                tag = 'evenrow' if line_query % 2 == 0 else 'oddrow'
                 try:
                     cursor.execute(i)
                     # COLUMNAS DE LOS REGISTROS DE LA QUERY
@@ -608,11 +614,11 @@ def execute_query(data_text):
                     #RESPUESTA DE LA CONSULTA
                     data_query = cursor.fetchall()
                     
-                    TREE_item.insert("", "end", values=(line_query, i)) #, tags=(tag,)
+                    TREE_item.insert("", "end", values=(line_query, i),tags=(tag,)) #, tags=(tag,)
                     # FUNCION QUE SE ENCARGA DE MOSTRAR EL RESULTADO
                     show_data(columns,data_query)
                 except Exception as e:
-                    TREE_item.insert("", "end", values=(line_query, f"ERROR IN:[ {i} ] SQLerror:[ {e} ]")) #, tags=(tag,)
+                    TREE_item.insert("", "end", values=(line_query, f"ERROR IN:[ {i} ] SQLerror:[ {e} ]"),tags=(tag,)) #, tags=(tag,)
                     print([i], "No se pudo ejecutar ->",e)
                     break
                 line_query+=1
@@ -633,16 +639,16 @@ lbl_file_path.pack(expand=True, fill=X)
 Label(F_filter,text="Destination").pack(expand=True, fill=X)
 lbl_file_path_out = Entry(F_filter)
 lbl_file_path_out.pack(expand=True, fill=X)
-Button(F_filter, text="Open Excel file", bg="green",fg="white",font=("arial",12,"bold"), command=lambda: get_file_path()).pack()
+#Button(F_filter, text="Open file", bg="green",fg="white",font=("arial",12,"bold"), command=lambda: get_file_path()).pack()
 
 FR_input = Frame(F_filter)
 FR_input.pack()
 
-Label(FR_input, text="Select sheet :").grid(row=0, column=0, sticky='e')
-Label(FR_input, text="All of the sheets :").grid(row=0, column=2, sticky='e')
-Label(FR_input, text="Name as table :").grid(row=2, column=0, sticky='e')
-Label(FR_input, text="Suffix :").grid(row=3, column=0, sticky='e')
-Label(FR_input, text="Save locally :").grid(row=2, column=2, sticky='e')
+Label(FR_input, text="Select sheet :").grid(        row=0, column=0, sticky='e')
+Label(FR_input, text="Name as table :").grid(       row=0, column=2, sticky='e')
+Label(FR_input, text="All of the sheets :").grid(   row=0, column=4, sticky='e')
+Label(FR_input, text="Suffix :").grid(              row=0, column=6, sticky='e')
+Label(FR_input, text="Save locally :").grid(        row=0, column=8, sticky='e')
 
 # === Canvas + Scrollbar en el contenedor principal ===
 wrapper = Frame(F_filter)
@@ -703,9 +709,9 @@ list_sheets = ttk.Combobox(FR_input,state="readonly")
 list_sheets.grid(row=0, column=1, sticky='w')
 list_sheets.bind("<<ComboboxSelected>>", al_seleccionar_hoja)
 table_name = Entry(FR_input)
-table_name.grid(row=2, column=1, sticky='we')
+table_name.grid(row=0, column=3, sticky='we')
 sufijo_name = Entry(FR_input)
-sufijo_name.grid(row=3, column=1, sticky='we')
+sufijo_name.grid(row=0, column=7, sticky='we')
 
 def cambiar_texto():
     # Cambiar el texto del Checkbutton según su estado
@@ -761,16 +767,20 @@ var = BooleanVar()
 var_saved = BooleanVar()
 # Crear el Checkbutton
 checkbutton = Checkbutton(FR_input, text="No", variable=var, command=cambiar_texto)
-checkbutton.grid(row=0, column=3, sticky='w')
+checkbutton.grid(row=0, column=5, sticky='w')
 
 checkbutton_save = Checkbutton(FR_input, text="No", variable=var_saved, command=cambiar_texto_save)
-checkbutton_save.grid(row=2, column=3, sticky='w')
+checkbutton_save.grid(row=0, column=9, sticky='w')
 
-BTN_CHARGE_DATA=Button(FR_input, text="Data load",bg="lightgreen",fg="black", command=lambda: save_data(name_path_file, table_name.get(), list_sheets.get(),var.get(),sufijo_name.get()))
-BTN_CHARGE_DATA.grid(row=5, column=0,columnspan=2, sticky="e")
+FR_BTN_main = Frame(FR_input)
+FR_BTN_main.grid(row=1, column=0, columnspan=9) 
 
-BTN_REFRESH=Button(FR_input, text="Refresh", bg="lightblue", command=lambda: refrescar())
-BTN_REFRESH.grid(row=5, column=2,columnspan=2,sticky="w")
+Button(FR_BTN_main, text="Open file", bg="green",fg="white",font=("arial",12,"bold"), command=lambda: get_file_path()).grid(row=0, column=0)
+BTN_CHARGE_DATA=Button(FR_BTN_main, text="Data load",bg="lightgreen",fg="black",font=("arial",12,"bold"), command=lambda: save_data(name_path_file, table_name.get(), list_sheets.get(),var.get(),sufijo_name.get()))
+BTN_CHARGE_DATA.grid(row=0, column=1)
+
+BTN_REFRESH=Button(FR_BTN_main, text="Refresh", bg="lightblue",fg="black",font=("arial",12,"bold"), command=lambda: refrescar())
+BTN_REFRESH.grid(row=0, column=2)
 
 F_database = LabelFrame(F_main,text="Database")
 F_database.pack(side=RIGHT,fill=BOTH)
@@ -783,7 +793,7 @@ style.configure("Treeview", rowheight=25)  # Ajustar altura de filas
 
 
 # Crear un Treeview con columnas
-tree = ttk.Treeview(F_database, columns=("Table", "Columns"), show="headings", height=6)
+tree = ttk.Treeview(F_database, columns=("Table", "Columns"), show="headings", height=5)
 
 # Definir encabezados
 tree.heading("Table", text="Table")
@@ -853,10 +863,10 @@ def marcar_palabras(event=None):
 F_editor = Frame(frm_query)
 F_editor.pack(fill=BOTH)
 
-item_numbers = Text(F_editor, height=20,width=4, wrap="none",bg='black',font=("Courier",11,"bold"),fg='green',insertbackground='white')  # wrap="word" evita cortar palabras
+item_numbers = Text(F_editor, height=15,width=4, wrap="none",bg='black',font=("Courier",11,"bold"),fg='green',insertbackground='white')  # wrap="word" evita cortar palabras
 item_numbers.pack(side=LEFT, fill=X)
 
-texto = Text(F_editor, height=20, bg='black',wrap="none",font=("Courier",11,"bold"),fg='white',insertbackground='white')  # wrap="word" evita cortar palabras
+texto = Text(F_editor, height=15, bg='black',wrap="none",font=("Courier",11,"bold"),fg='white',insertbackground='white')  # wrap="word" evita cortar palabras
 texto.pack(side=LEFT, fill=X, expand=True)
 texto.focus_set()
 
@@ -890,7 +900,7 @@ item_numbers.config(state="disabled")
 
 Button(root,text="Execute query",font=("Arial",12,"bold"), cursor="hand2",background="orange",fg="black",command=lambda:execute_query(texto.get("1.0", END))).pack()
 frm_response_iten = Frame(root,bg="grey")
-frm_response_iten.pack(fill=BOTH, expand=True)
+frm_response_iten.pack(fill=BOTH)
 # Crear un Treeview con columnas
 TREE_item = ttk.Treeview(frm_response_iten, columns=("item", "Columns"), show="headings", height=3)
 
