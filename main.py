@@ -923,7 +923,7 @@ root.bind("<Configure>", on_resize)
 # Posicionar el Treeview
 TREE_item.pack(expand=True, fill="both")
 
-frm_response_show = Frame(root, bg="orange")
+frm_response_show = Frame(root, bg="#f0f0f0")
 frm_response_show.pack(fill=BOTH, expand=True)
 print(r"""
                _____   ____   __     __   __ ______ __      __ 
