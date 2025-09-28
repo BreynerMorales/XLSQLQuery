@@ -99,21 +99,22 @@ import xlrd
 # for fecha in fechas:
 #     print(f"{fecha} → {convertir_fecha(fecha)}")
 
-# VARIABLES
+# VARIABLES Y CONSTANTES
 name_path_file = ''
 row_muestra = None
 row_title = None
 workbook  = None
 extension_user = None
 URL_DATABASE = None
+DATA_EXECUTE = None
 # f_columns = None
 # Lista de palabras reservadas de SQL
 palabras_reservadas = [
-    "select", "insert", "update", "delete", "from", "where", "join", "into", "drop", "alter", "create",
+    "with","select", "insert", "update", "delete", "from", "where", "join", "into", "drop", "alter", "create",
     "table", "column", "values", "as", "and", "or", "not", "is", "in", "like", "between", "group", "having",
     "order", "by", "distinct", "union", "left", "right", "inner", "outer", "exists", "case", "when", "then",
     "else", "end", "null", "true", "false", "on", "between", "like", "limit", "offset", "primary", "foreign",
-    "key", "check", "constraint"
+    "key", "check", "constraint","count","IF","TEMP",";",",","="
 ]
 
 def read_excel_file():
@@ -559,69 +560,59 @@ def get_database_info(tree):
 
 
 def execute_query(data_text):
-    def show_data(columns, data):
-        for widget in frm_response_show.winfo_children():
-            widget.destroy()
+    global DATA_EXECUTE
+    def ejecutar_bloque(conexion, bloque_sql, limite_select=10000):
+        """
+        Ejecuta un bloque con múltiples sentencias SQL.
+        Devuelve una lista de resultados (uno por sentencia):
+        - SELECT/PRAGMA → [sql, filas, columnas]
+        - DML (INSERT, UPDATE, DELETE, REPLACE) → [sql, rowcount]
+        - DDL (CREATE, DROP, ALTER) → [sql, True]
+        - Error → [sql, "Error", mensaje_error]
+        """
+        cursor = conexion.cursor()
+        resultados = []
 
-        # Crear el Treeview
-        tree = ttk.Treeview(frm_response_show, columns=tuple(columns), show="headings")
-        tree.pack(expand=True, fill='both', padx=10, pady=10)
+        # Separar sentencias por ;
+        sentencias = [s.strip() for s in bloque_sql.split(";") if s.strip()]
+        print("THIS IS A SENTENCES:",sentencias)
+        for sql in sentencias:
+            qtype = sql.split()[0].upper()
+            print("THIS IS TYPE",qtype)
+            try:
+                cursor.execute(sql)
 
-        # Configurar encabezados
-        for col in columns:
-            tree.heading(col, text=col)
+                if qtype in ("SELECT", "PRAGMA","WITH"):
+                    # filas = cursor.fetchall()
+                    filas = cursor.fetchmany(limite_select)
+                    columnas = [desc[0] for desc in cursor.description] if cursor.description else []
+                    resultados.append([sql, filas, columnas])
+                elif qtype in ("INSERT", "UPDATE", "DELETE", "REPLACE"):
+                    resultados.append([sql, cursor.rowcount])
+                else:
+                    resultados.append([sql, True])  # CREATE, DROP, ALTER, etc.
+            except Exception as e:
+                resultados.append([sql, "Error", str(e)])
 
+        return resultados
+
+    for item in TREE_item.get_children():
+        TREE_item.delete(item)
+    print(data_text)
+    query = data_text.replace("\n", " ").replace("\t", " ")
+    conn = sqlite3.connect("DATA/data_main.db")
+    DATA_EXECUTE = ejecutar_bloque(conn,query)
+    line_query = 1
+    for i in DATA_EXECUTE:
         # Definir estilos de fila alternos usando tags
-        tree.tag_configure('evenrow', background='#f0f0f0')  # gris claro
-        tree.tag_configure('oddrow', background='white')     # blanco
-
-        # Insertar datos con colores alternos
-        for idx, row in enumerate(data):
-            tag = 'evenrow' if idx % 2 == 0 else 'oddrow'
-            tree.insert("", "end", values=row, tags=(tag,))
-
-    contenido = data_text.replace("\n","").split(";")
-
-    execute_connect = False
-    for i in contenido:
-        len_str = len(i.replace(" ",""))
-        if len_str:
-            execute_connect = True
-
-    if execute_connect:
-        # Limpiar todos los elementos
-        for item in TREE_item.get_children():
-            TREE_item.delete(item)
-        print("Connectar y ejecutar query")
-        
-        # Conectar a la base de datos
-        conn = sqlite3.connect("DATA/data_main.db")
-        cursor = conn.cursor()
-
-        line_query = 1
-        for i in contenido:
-            len_str = len(i.replace(" ",""))
-            if len_str:
-                print(f"Query line {line_query} [{len_str}] chars:", i)
-                # Definir estilos de fila alternos usando tags
-                TREE_item.tag_configure('evenrow', background='#f0f0f0')  # gris claro
-                TREE_item.tag_configure('oddrow', background='white')     # blanco
-                tag = 'evenrow' if line_query % 2 == 0 else 'oddrow'
-                try:
-                    cursor.execute(i)
-                    # COLUMNAS DE LOS REGISTROS DE LA QUERY
-                    columns = [desc[0] for desc in cursor.description]
-                    #RESPUESTA DE LA CONSULTA
-                    data_query = cursor.fetchall()
-                    
-                    TREE_item.insert("", "end", values=(line_query, i),tags=(tag,)) #, tags=(tag,)
-                    # FUNCION QUE SE ENCARGA DE MOSTRAR EL RESULTADO
-                    show_data(columns,data_query)
-                except Exception as e:
-                    TREE_item.insert("", "end", values=(line_query, f"ERROR IN:[ {i} ] SQLerror:[ {e} ]"),tags=(tag,)) #, tags=(tag,)
-                    print([i], "No se pudo ejecutar ->",e)
-                    break
-                line_query+=1
+        TREE_item.tag_configure('evenrow', background='#f0f0f0')  # gris claro
+        TREE_item.tag_configure('oddrow', background='white')     # blanco
+        TREE_item.tag_configure('error', background='#FF7659')     # blanco
+        tag = 'evenrow' if line_query % 2 == 0 else 'oddrow'
+        if i[1] == "Error":
+            tag = 'error'
+        TREE_item.insert("", "end", values=(line_query, f"{f'[{i[1]}] {i[2]} in {i[0]}' if i[1] == 'Error' else F'[OK] {i[0]}'}"),tags=(tag,)) #, tags=(tag,)
+        line_query+=1
         conn.close()
 root = Tk()
 root.title("SQLXEL Administrator v1.0.0 Powered by Breyner J")
@@ -654,7 +645,7 @@ Label(FR_input, text="Save locally :").grid(        row=0, column=8, sticky='e')
 wrapper = Frame(F_filter)
 wrapper.pack(fill="both", expand=True)
 
-canvas = tk.Canvas(wrapper, height=100)
+canvas = tk.Canvas(wrapper, height=120)
 canvas.pack(side="top", fill="both", expand=True)
 
 scroll_x = tk.Scrollbar(wrapper, orient="horizontal", command=canvas.xview)
@@ -902,16 +893,53 @@ Button(root,text="Execute query",font=("Arial",12,"bold"), cursor="hand2",backgr
 frm_response_iten = Frame(root,bg="grey")
 frm_response_iten.pack(fill=BOTH)
 # Crear un Treeview con columnas
-TREE_item = ttk.Treeview(frm_response_iten, columns=("item", "Columns"), show="headings", height=3)
+TREE_item = ttk.Treeview(frm_response_iten, columns=("item", "Query"), show="headings", height=3)
 
 # Definir encabezados
 TREE_item.heading("item", text="Item")
-TREE_item.heading("Columns", text="Columns")
+TREE_item.heading("Query", text="Query")
+# Vincular evento de selección
+def on_row_selected(event):
+    def show_data(columns, data):
+        for widget in frm_response_show.winfo_children():
+            widget.destroy()
 
+        # Crear el Treeview
+        tree = ttk.Treeview(frm_response_show, columns=tuple(columns), show="headings")
+        tree.pack(expand=True, fill='both', padx=10, pady=10)
+
+        # Configurar encabezados
+        for col in columns:
+            tree.heading(col, text=col)
+
+        # Definir estilos de fila alternos usando tags
+        tree.tag_configure('evenrow', background='#f0f0f0')  # gris claro
+        tree.tag_configure('oddrow', background='white')     # blanco
+
+        # Insertar datos con colores alternos
+        for idx, row in enumerate(data):
+            tag = 'evenrow' if idx % 2 == 0 else 'oddrow'
+            tree.insert("", "end", values=row, tags=(tag,))
+    # Obtener referencia al widget
+    tree = event.widget  
+    
+    # Obtener el item seleccionado
+    selected_item = tree.selection()
+    if selected_item:
+        item = selected_item[0]
+        valores = tree.item(item, "values")
+        print(f"Fila seleccionada: {valores[0]}",DATA_EXECUTE[int(valores[0])-1])
+        
+        if len(DATA_EXECUTE[int(valores[0])-1]) == 3 and DATA_EXECUTE[int(valores[0])-1][1] != "Error":
+            
+            for i in DATA_EXECUTE[int(valores[0])-1]:
+                print(i)
+            show_data(DATA_EXECUTE[int(valores[0])-1][2],DATA_EXECUTE[int(valores[0])-1][1])
+TREE_item.bind("<<TreeviewSelect>>", on_row_selected)
 def on_resize(event):
     ancho = root.winfo_width()
     TREE_item.column("item", width=int(ancho * 0.05), anchor="w")
-    TREE_item.column("Columns", width=int(ancho * 0.95), anchor="w")
+    TREE_item.column("Query", width=int(ancho * 0.95), anchor="w")
 root.bind("<Configure>", on_resize)
 
 # Definir colores con tags
