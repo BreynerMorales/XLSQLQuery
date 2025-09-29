@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import messagebox
 import sqlite3
-# from openpyxl import load_workbook
+
 from tkinter import ttk
 import re
 
@@ -40,7 +40,7 @@ class MiAplicacion(Tk):
 
         # Configuración de la ventana principal
         self.title(self.CONFIG["APP_TITLE"])
-        self.geometry(self.CONFIG["APP_SIZE"])
+        # self.geometry(self.CONFIG["APP_SIZE"])
         self.configure(bg=self.CONFIG["BACKGROUND_COLOR"])
 
         try:
@@ -514,6 +514,6 @@ class MiAplicacion(Tk):
             for i in range(2,ultima_linea[1]+1):
                 self.item_numbers.insert(END,f"\n{i}")
             self.item_numbers.config(state="disabled")
-# if __name__ == "__main__":
-app = MiAplicacion()
-app.mainloop()
+if __name__ == "__main__":
+    app = MiAplicacion()
+    app.mainloop()
