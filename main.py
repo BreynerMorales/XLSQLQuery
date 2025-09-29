@@ -82,7 +82,7 @@ import xlrd
     
 #     return "Formato de fecha no reconocido"  # Si ningún formato coincide
 
-# 🔹 Pruebas
+# Pruebas
 # fechas = [
 #     "26-Feb-25 16:21:48",
 #     "26-Feb-25",
@@ -114,7 +114,7 @@ palabras_reservadas = [
     "table", "column", "values", "as", "and", "or", "not", "is", "in", "like", "between", "group", "having",
     "order", "by", "distinct", "union", "left", "right", "inner", "outer", "exists", "case", "when", "then",
     "else", "end", "null", "true", "false", "on", "between", "like", "limit", "offset", "primary", "foreign",
-    "key", "check", "constraint","count","IF","TEMP",";",",","="
+    "key", "check", "constraint","count","IF","TEMP",";",",","=","DATE","DATE","DATETIME","hours","day","now"
 ]
 
 def read_excel_file():
@@ -598,8 +598,15 @@ def execute_query(data_text):
 
     for item in TREE_item.get_children():
         TREE_item.delete(item)
-    print(data_text)
-    query = data_text.replace("\n", " ").replace("\t", " ")
+    # print("DELETE COMMENT",data_text.split("\n"))
+    query_no_comments=""
+    for i in data_text.split("\n"):
+        if i[0:2] != "--":
+            query_no_comments +=  F" {i}"
+        else:
+            print(f"THIS IS A COMMENT: {i}")
+    print("COMMENTS CLEANED",query_no_comments)
+    query = query_no_comments.replace("\n", " ").replace("\t", " ")
     conn = sqlite3.connect("DATA/data_main.db")
     DATA_EXECUTE = ejecutar_bloque(conn,query)
     line_query = 1
