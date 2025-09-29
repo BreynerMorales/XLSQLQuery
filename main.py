@@ -115,7 +115,7 @@ class MiAplicacion(Tk):
         self.BTN_CHARGE_DATA=Button(FR_BTN_main, text="Data load",bg="lightgreen",fg="black",font=("arial",12,"bold"), command=lambda: self.save_data_met())
         self.BTN_CHARGE_DATA.grid(row=0, column=1)
 
-        BTN_REFRESH=Button(FR_BTN_main, text="Refresh", bg="lightblue",fg="black",font=("arial",12,"bold"), command=lambda: refrescar())
+        BTN_REFRESH=Button(FR_BTN_main, text="Refresh", bg="lightblue",fg="black",font=("arial",12,"bold"), command=lambda: self.refrescar())
         BTN_REFRESH.grid(row=0, column=2)
 
         F_database = LabelFrame(F_main,text="Database")
