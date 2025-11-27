@@ -26,3 +26,4 @@ Queda estrictamente prohibida la copia, distribución o modificación del códig
 No se permite el uso comercial sin permiso explícito.
 
 Todos los derechos reservados.
+<img width="1918" height="1076" alt="image" src="https://github.com/user-attachments/assets/b581c9b2-019a-4b0a-bbde-f6fd6ced3539" />
