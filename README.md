@@ -1,13 +1,28 @@
-# SQLXEL Administrator
-SQLXEL Administrator es una herramienta que permite transformar hojas de calculo (.xlsx, xls y proximamente archivos csv) en Tablas SQL consultables. Convierte automáticamente las hojas de cálculo en tablas de base de datos, lo que permite ejecutar consultas SQL directamente sobre los datos.
+#SQLXEL Administrator
 
+SQLXEL Administrator es una herramienta diseñada para convertir hojas de cálculo (.xlsx, .xls y .csv) en tablas SQL utilizando una base de datos SQLite.
+Permite transformar datos rápidamente y ejecutar consultas SQL directamente sobre la información convertida, facilitando análisis, auditorías y automatización de procesos.
+
+Características principales
+
+📄 Importación automática de archivos Excel y CSV.
+
+🗃️ Generación de tablas SQL basadas en la estructura del archivo.
+
+⚡ Ejecución directa de consultas SQL sobre los datos convertidos.
+
+🧹 Limpieza y normalización básica de datos durante la importación.
+
+🛠️ Ideal para análisis rápidos, validaciones y tareas de data engineering.
+
+Licencia propietaria
 
 Proprietary License
 
 Copyright (c) 2025 Breyner Morales
 
-This software is proprietary and confidential.  
-Unauthorized copying of this file, via any medium, is strictly prohibited.  
-The source code is not open for modification, distribution, or commercial use without prior written permission from the author.
+Este software es propietario y confidencial.
+Queda estrictamente prohibida la copia, distribución o modificación del código fuente sin autorización previa por escrito del autor.
+No se permite el uso comercial sin permiso explícito.
 
-All rights reserved.
+Todos los derechos reservados.
