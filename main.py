@@ -16,9 +16,10 @@ from MODULES.vars import varsco
 from MODULES.open_file import open_file_excel
 from MODULES.sql_insert_data import SQL_INSERT_DATA
 from MODULES.execute import execute_query
+from MODULES.open_csv import main as main_csv
 class MiAplicacion(Tk):
     CONFIG = {
-        "APP_TITLE": "SQLXEL Administrator v1.0.0 Powered by Breyner J",
+        "APP_TITLE": "SQLXEL Administrator v1.1.0 Powered by github.com/BreynerMorales",
         "APP_SIZE": "600x400",
         "APP_PATH_ICON": "SOURCE/icon.ico",
         "BACKGROUND_COLOR": "white",
@@ -57,8 +58,9 @@ class MiAplicacion(Tk):
         """Crea y organiza los elementos gráficos (widgets)"""
         F_main = Frame(self, bg="green")
         F_main.pack(fill=BOTH)
+        
 
-        F_filter = LabelFrame(F_main, text="Filter and selection")
+        F_filter = LabelFrame(F_main, text="Filter and selection XLS and XLSX")
         F_filter.pack(fill=BOTH, expand=True,side=LEFT)
         Label(F_filter,text="Origin").pack(expand=True, fill=X)
         self.lbl_file_path = Entry(F_filter)
@@ -110,13 +112,14 @@ class MiAplicacion(Tk):
 
         FR_BTN_main = Frame(FR_input)
         FR_BTN_main.grid(row=1, column=0, columnspan=9) 
-
+        main_csv(F_main)
         Button(FR_BTN_main, text="Open file", bg="green",fg="white",font=("arial",12,"bold"), command=lambda: self.get_file_path(self.lbl_file_path,self.list_sheets,self.f_columns)).grid(row=0, column=0)
+        #Button(FR_BTN_main, text="Open file CSV", bg="green",fg="white",font=("arial",12,"bold"), command=lambda: main_csv(F_main)).grid(row=0, column=1)
         self.BTN_CHARGE_DATA=Button(FR_BTN_main, text="Data load",bg="lightgreen",fg="black",font=("arial",12,"bold"), command=lambda: self.save_data_met())
-        self.BTN_CHARGE_DATA.grid(row=0, column=1)
+        self.BTN_CHARGE_DATA.grid(row=0, column=2)
 
         BTN_REFRESH=Button(FR_BTN_main, text="Refresh", bg="lightblue",fg="black",font=("arial",12,"bold"), command=lambda: self.refrescar())
-        BTN_REFRESH.grid(row=0, column=2)
+        BTN_REFRESH.grid(row=0, column=3)
 
         F_database = LabelFrame(F_main,text="Database")
         F_database.pack(side=RIGHT,fill=BOTH)
@@ -450,7 +453,7 @@ class MiAplicacion(Tk):
                 #(9, 'name_column', 'TEXT')
                 # data.append((j[0],j[1],j[2]))
                 data.append((str(j[0]),j[1]))
-            data_main.append((tabla[0],f"{len(columnas)} columnas",data))
+            data_main.append((tabla[0],f"{len(columnas)} cols",data))
         # return data_main
         # print
         # Insertar nodos padres e hijos dinámicamente

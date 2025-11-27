@@ -90,8 +90,8 @@ def SQL_INSERT_DATA(list_sheet_names_ok,name_from_edittable,sufijo=""): #name_fr
                     print("Column: ", row_title_sheet[column_muestra],col, data_type)
                     column_muestra+=1
                 # Crear la tabla
-                cursor.execute(f'''CREATE TABLE IF NOT EXISTS {sheet_item} ({estructura_sql})''')
                 print(f"CREATE TABLE IF NOT EXISTS {sheet_item} ({estructura_sql})")
+                cursor.execute(f'''CREATE TABLE IF NOT EXISTS {sheet_item} ({estructura_sql})''')
                 conexion.commit()
                 
                 #==================================================================
