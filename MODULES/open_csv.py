@@ -155,7 +155,7 @@ class CSVReaderApp(ttk.Frame):
         self.paned = ttk.Panedwindow(self, orient=tk.HORIZONTAL)
 
         # Listbox con scrollbar (lista de rutas)
-        self.frame_list = ttk.Labelframe(self.paned, text="Archivos encontrados")
+        #self.frame_list = ttk.Labelframe(self.paned, text="Archivos encontrados")
         #self.listbox = tk.Listbox(self.frame_list, selectmode=tk.EXTENDED)
         #self.sb_list = ttk.Scrollbar(self.frame_list, orient=tk.VERTICAL, command=self.listbox.yview)
         #self.listbox.configure(yscrollcommand=self.sb_list.set)
@@ -189,7 +189,7 @@ class CSVReaderApp(ttk.Frame):
         self.paned.pack(fill="both", expand=True, padx=12, pady=(0,12))
 
         # List frame layout
-        self.paned.add(self.frame_list, weight=1)
+        #self.paned.add(self.frame_list, weight=1)
         #self.listbox.pack(side="left", fill="both", expand=True, padx=(8,0), pady=8)
         #self.sb_list.pack(side="left", fill="y", padx=(0,8), pady=8)
 
@@ -373,9 +373,15 @@ class CSVReaderApp(ttk.Frame):
                     print(f'CREATE TABLE "{table_name}" ({col_defs});')
                     # Insertar filas válidas
                     placeholders = ", ".join("?" for _ in headers)
+                    # insert_sql = (
+                    #     f'INSERT INTO "{table_name}" '
+                    #     f'({", ".join(f"""\"{h}\"""" for h in headers)}) '
+                    #     f'VALUES ({placeholders});'
+                    # )
+                    columns = ", ".join(['"{}"'.format(h) for h in headers])
+
                     insert_sql = (
-                        f'INSERT INTO "{table_name}" '
-                        f'({", ".join(f"""\"{h}\"""" for h in headers)}) '
+                        f'INSERT INTO "{table_name}" ({columns}) '
                         f'VALUES ({placeholders});'
                     )
                     print(insert_sql)
