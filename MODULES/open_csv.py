@@ -68,11 +68,15 @@ def es_numerico_str(s: str) -> bool:
     if s == "":
         return False
     try:
-        float(s)
-        return True
-    except:
-        return False
+        #float(s)
+        if s.isdigit() and s.startswith("0"):
+            #pass
+            return False
+        else:
 
+            return True
+    except:
+        pass
 def detectar_tipo_columna(valores):
     # valores: iterable de strings (ya leídos)
     # ignorar strings vacíos para la detección
@@ -80,7 +84,8 @@ def detectar_tipo_columna(valores):
     if not validos:
         return "TEXT"
     for v in validos:
-        if not es_numerico_str(v):
+        #if not es_numerico_str(v):
+        if True:
             return "TEXT"
     return "NUMERIC"
 
@@ -317,97 +322,104 @@ class CSVReaderApp(ttk.Frame):
                 try:
                     p = Path(csv_file)
                     table_name = normalizar_nombre(p.stem)
-
-                    # Leer archivo CSV y detectar dialecto
-                    with open(p, "r", newline='', encoding="utf-8") as fh:
-                        sample = fh.read(2048)
-                        fh.seek(0)
-                        try:
-                            dialect = csv.Sniffer().sniff(sample)
-                        except Exception:
-                            dialect = csv.get_dialect('excel')
-                        reader = csv.reader(fh, dialect)
-
-                        rows = list(reader)
-
-                    if not rows:
-                        errors.append(f"{p.name}: archivo vacío")
-                        continue
-
-                    # Encabezados
-                    raw_headers = rows[0]
-                    headers = [normalizar_nombre(h) for h in raw_headers]
-
-                    # Asegurar que no haya columnas duplicadas (añadir sufijos si es necesario)
-                    seen = {}
-                    for i, h in enumerate(headers):
-                        base = h or f"col{i}"
-                        if base in seen:
-                            seen[base] += 1
-                            headers[i] = f"{base}_{seen[base]}"
-                        else:
-                            seen[base] = 0
-                            headers[i] = base
-
-                    # Transponer filas para detectar tipos por columna (saltando cabecera)
-                    data_rows = rows[1:]
-                    if not data_rows:
-                        # No hay filas de datos, crear columnas como TEXT por defecto
-                        tipos = ["TEXT"] * len(headers)
+                    # Consulta para verificar existencia
+                    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
+                    existe = cursor.fetchone() is not None
+                    if existe:
+                        print(f"La tabla '{table_name}' existe.")
+                        # conexion.close()
+                        messagebox.showwarning("Alerta", f'La tabla "{table_name}" será omitida porque ya existe')
                     else:
-                        # Preparar columnas como listas
-                        cols = [[] for _ in headers]
+                        # Leer archivo CSV y detectar dialecto
+                        with open(p, "r", newline='', encoding="utf-8") as fh:
+                            sample = fh.read(2048)
+                            fh.seek(0)
+                            try:
+                                dialect = csv.Sniffer().sniff(sample)
+                            except Exception:
+                                dialect = csv.get_dialect('excel')
+                            reader = csv.reader(fh, dialect)
+
+                            rows = list(reader)
+
+                        if not rows:
+                            errors.append(f"{p.name}: archivo vacío")
+                            continue
+
+                        # Encabezados
+                        raw_headers = rows[0]
+                        headers = [normalizar_nombre(h) for h in raw_headers]
+
+                        # Asegurar que no haya columnas duplicadas (añadir sufijos si es necesario)
+                        seen = {}
+                        for i, h in enumerate(headers):
+                            base = h or f"col{i}"
+                            if base in seen:
+                                seen[base] += 1
+                                headers[i] = f"{base}_{seen[base]}"
+                            else:
+                                seen[base] = 0
+                                headers[i] = base
+
+                        # Transponer filas para detectar tipos por columna (saltando cabecera)
+                        data_rows = rows[1:]
+                        if not data_rows:
+                            # No hay filas de datos, crear columnas como TEXT por defecto
+                            tipos = ["TEXT"] * len(headers)
+                        else:
+                            # Preparar columnas como listas
+                            cols = [[] for _ in headers]
+                            for r in data_rows:
+                                # Si fila más corta, extender con ""
+                                r_extended = list(r) + [""] * (len(headers) - len(r))
+                                for idx, val in enumerate(r_extended[:len(headers)]):
+                                    cols[idx].append(val if val is not None else "")
+
+                            tipos = [detectar_tipo_columna(col) for col in cols]
+                            #print(table_name,cols)
+                        # Crear tabla (DROP IF EXISTS para reemplazar)
+                        col_defs = ", ".join(f'"{headers[i]}" {tipos[i]}' for i in range(len(headers)))
+                        cursor.execute(f'PRAGMA foreign_keys = OFF;')
+                        #cursor.execute(f'DROP TABLE IF EXISTS "{table_name}";')
+                        cursor.execute(f'CREATE TABLE "{table_name}" ({col_defs});')
+                        print(f'CREATE TABLE "{table_name}" ({col_defs});')
+                        # Insertar filas válidas
+                        placeholders = ", ".join("?" for _ in headers)
+                        # insert_sql = (
+                        #     f'INSERT INTO "{table_name}" '
+                        #     f'({", ".join(f"""\"{h}\"""" for h in headers)}) '
+                        #     f'VALUES ({placeholders});'
+                        # )
+                        columns = ", ".join(['"{}"'.format(h) for h in headers])
+
+                        insert_sql = (
+                            f'INSERT INTO "{table_name}" ({columns}) '
+                            f'VALUES ({placeholders});'
+                        )
+                        print(insert_sql)
+                        inserted = 0
                         for r in data_rows:
-                            # Si fila más corta, extender con ""
+                            # Extender fila si es más corta
                             r_extended = list(r) + [""] * (len(headers) - len(r))
-                            for idx, val in enumerate(r_extended[:len(headers)]):
-                                cols[idx].append(val if val is not None else "")
+                            # Si fila está completamente vacía -> saltar
+                            if all((cell is None or str(cell).strip() == "") for cell in r_extended[:len(headers)]):
+                                continue
+                            # Convertir valores según tipos
+                            valores_insert = []
+                            for idx, raw_val in enumerate(r_extended[:len(headers)]):
+                                tipo = tipos[idx]
+                                valor_conv = convertir_valor_segun_tipo(raw_val, tipo)
+                                valores_insert.append(valor_conv)
+                            try:
+                                cursor.execute(insert_sql, valores_insert)
+                                inserted += 1
+                            except Exception as e:
+                                # Si un insert falla, registrar y seguir
+                                errors.append(f"{p.name}: error insert fila -> {e}")
+                                continue
 
-                        tipos = [detectar_tipo_columna(col) for col in cols]
-
-                    # Crear tabla (DROP IF EXISTS para reemplazar)
-                    col_defs = ", ".join(f'"{headers[i]}" {tipos[i]}' for i in range(len(headers)))
-                    cursor.execute(f'PRAGMA foreign_keys = OFF;')
-                    cursor.execute(f'DROP TABLE IF EXISTS "{table_name}";')
-                    cursor.execute(f'CREATE TABLE "{table_name}" ({col_defs});')
-                    print(f'CREATE TABLE "{table_name}" ({col_defs});')
-                    # Insertar filas válidas
-                    placeholders = ", ".join("?" for _ in headers)
-                    # insert_sql = (
-                    #     f'INSERT INTO "{table_name}" '
-                    #     f'({", ".join(f"""\"{h}\"""" for h in headers)}) '
-                    #     f'VALUES ({placeholders});'
-                    # )
-                    columns = ", ".join(['"{}"'.format(h) for h in headers])
-
-                    insert_sql = (
-                        f'INSERT INTO "{table_name}" ({columns}) '
-                        f'VALUES ({placeholders});'
-                    )
-                    print(insert_sql)
-                    inserted = 0
-                    for r in data_rows:
-                        # Extender fila si es más corta
-                        r_extended = list(r) + [""] * (len(headers) - len(r))
-                        # Si fila está completamente vacía -> saltar
-                        if all((cell is None or str(cell).strip() == "") for cell in r_extended[:len(headers)]):
-                            continue
-                        # Convertir valores según tipos
-                        valores_insert = []
-                        for idx, raw_val in enumerate(r_extended[:len(headers)]):
-                            tipo = tipos[idx]
-                            valor_conv = convertir_valor_segun_tipo(raw_val, tipo)
-                            valores_insert.append(valor_conv)
-                        try:
-                            cursor.execute(insert_sql, valores_insert)
-                            inserted += 1
-                        except Exception as e:
-                            # Si un insert falla, registrar y seguir
-                            errors.append(f"{p.name}: error insert fila -> {e}")
-                            continue
-
-                    conn.commit()
-                    processed += 1
+                        conn.commit()
+                        processed += 1
 
                 except Exception as e_file:
                     errors.append(f"{csv_file}: {e_file}")
